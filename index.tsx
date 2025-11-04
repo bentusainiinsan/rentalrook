@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useContext, createContext, useMemo, ReactNode } from 'react';
 import ReactDOM from 'react-dom/client';
+import { GoogleGenAI } from "@google/genai";
 
 // --- BUNDLED FROM types.ts ---
 interface User {
@@ -498,6 +499,12 @@ const PropertyList: React.FC = () => {
 };
 
 // --- BUNDLED FROM components/AddPropertyForm.tsx ---
+const SparkleIcon = ({ className = "w-5 h-5" }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.898 20.562L16.25 22.5l-.648-1.938a3.375 3.375 0 00-2.684-2.684L11.25 18l1.938-.648a3.375 3.375 0 002.684-2.684L16.25 13.5l.648 1.938a3.375 3.375 0 002.684 2.684L21.75 18l-1.938.648a3.375 3.375 0 00-2.684 2.684z" />
+    </svg>
+);
+
 const AddPropertyForm: React.FC = () => {
     const { addProperty, user } = useContext(AppContext);
     const [title, setTitle] = useState('');
@@ -509,12 +516,38 @@ const AddPropertyForm: React.FC = () => {
     const [description, setDescription] = useState('');
     const [ownerName, setOwnerName] = useState(user?.name || '');
     const [ownerPhone, setOwnerPhone] = useState('');
+    const [isGenerating, setIsGenerating] = useState(false);
 
     useEffect(() => {
         if(user && !ownerName) {
             setOwnerName(user.name);
         }
     }, [user, ownerName]);
+
+    const handleGenerateDescription = async () => {
+        if (!title || !rent || !area) {
+            alert('Please fill in Title, Rent, and Area before generating a description.');
+            return;
+        }
+        setIsGenerating(true);
+        try {
+            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+            const prompt = `Write a compelling and professional property rental description in about 40-50 words for a property in Sonipat, India. The property is a '${type}' titled '${title}' located in '${area}, ${block}'. The monthly rent is ₹${rent}. Highlight key features suitable for this type of property and use a friendly but professional tone. Do not use hashtags.`;
+            
+            const response = await ai.models.generateContent({
+                model: "gemini-2.5-flash",
+                contents: prompt,
+            });
+
+            const text = response.text;
+            setDescription(text.trim());
+        } catch (error) {
+            console.error("Error generating description:", error);
+            alert("Sorry, we couldn't generate a description at this time. Please try again later.");
+        } finally {
+            setIsGenerating(false);
+        }
+    };
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -597,8 +630,19 @@ const AddPropertyForm: React.FC = () => {
                 </div>
 
                 <div>
-                    <label className="block text-sm font-medium text-gray-700">Description</label>
-                    <textarea value={description} onChange={e => setDescription(e.target.value)} rows={3} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"/>
+                    <div className="flex justify-between items-center">
+                        <label htmlFor="description" className="block text-sm font-medium text-gray-700">Description</label>
+                        <button
+                            type="button"
+                            onClick={handleGenerateDescription}
+                            disabled={isGenerating}
+                            className="flex items-center px-2 py-1 text-xs font-semibold text-indigo-700 bg-indigo-100 rounded-lg hover:bg-indigo-200 disabled:bg-gray-200 disabled:text-gray-500 transition-all duration-200"
+                        >
+                            <SparkleIcon className="w-4 h-4 mr-1.5" />
+                            {isGenerating ? 'Generating...' : 'Write with AI'}
+                        </button>
+                    </div>
+                    <textarea id="description" value={description} onChange={e => setDescription(e.target.value)} rows={4} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"/>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
