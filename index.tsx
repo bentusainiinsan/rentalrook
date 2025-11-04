@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext, createContext, useMemo, ReactNode } from 'react';
+import React, { useState, useEffect, useContext, createContext, useMemo, ReactNode, useRef } from 'react';
 import ReactDOM from 'react-dom/client';
 import { GoogleGenAI } from "@google/genai";
 
@@ -7,6 +7,7 @@ interface User {
     name: string;
     email: string;
     isAdmin: boolean;
+    picture?: string;
 }
 
 enum PropertyType {
@@ -69,12 +70,12 @@ const APP_INFO = {
 };
 
 const LOCATION_DATA: { [key: string]: string[] } = {
-  "Sonipat": ["4 Marla", "8 Marla", "Adersh Nagar", "Anand Nagar", "Arya Nagar", "Ashok Nagar", "Ashok Vihar", "Baba Colony", "Badwasni Gaon", "Bandepur", "Bara Bagad", "Batra Colony", "Bayanpur", "Bhagat Pura", "Bhagat Singh Colony", "Bharam Colony", "Bharam Nagar", "Bharatpuri", "Bhattan Mohalla", "Bheem Nagar", "Chawla Colony", "Chintpurni Colony", "Chitana Gaon", "Chotu Ram Chowk", "Chouhan Colony", "Davru Gaon", "Davru Road", "Defence Colony", "Deha Basti", "Delhi Camp", "Dev Nagar", "Dhanak Basti", "Dhiya Colony'", "Double Story", "Faj Bazar", "Faraz Khana", "Ganj Bazar", "Garh Sahajanpur", "Garhi Bharmana", "Garhi Gasita", "Gokul Nagar", "Govind Nagar", "Hanuman Nagar", "Hem Park", "Hullaheri Gaon", "Indian Colony", "Indra Colony", "Indra Colony, Kailash Pur", "Jamalpura", "Janta Colony", "Jatti Kalan", "Jatwara", "Jawahar Nagar", "Jeevan Nagar", "Kaath Mandi", "Kabir Nagar-Kalupur", "Kabir Pur", "Kachhey Querter", "Kailash Colony", "Kakroi Road", "Kalash Colony", "Kalupur", "Katth Mandi", "Khan Colony", "Khari Kwa", "Kot Mohalla", "Krishan Pura", "Krishana Nagar", "Kriti Nagar", "Kumhar Gate", "Lajpat Nagar", "Lal Darwaja", "Lehrara", "Luxmi Nagar", "Mahabir Colony", "Malviya Nagar", "Mamchand Colony", "Maya Puri", "Mc Colony", "Mirch Mandi", "Mission Road", "Model Town", "Mohalla Kalan", "Mohan Nagar", "Mohanpura", "Nandwani Nagar", "Narender Nagar", "New Jeevan Nagar", "Old Housing Board Colony", "Om Colony", "Omnagar", "Other", "Pancham Nagar", "Parbhu Nagar", "Pargati Nagar", "Patel Nagar", "Prem Nagar", "Prem Nagar- Kakroi Road", "Prem Nagar-Behind Bus Stand", "Pwd Colony", "Railway Colony", "Raj Mohalla", "Rajiv Colony", "Rajiv Nagar", "Ram Nagar", "Rishi Colony", "Rk Colony", "Roop Nagar", "Sabun Darwaja", "Sai Baba Colony", "Sainipura", "Sant Garb Dass Nagar", "Sector 1", "Sector 10", "Sector 11", "Sector 12", "Sector 13", "Sector 14", "Sector 15", "Sector 15 Housing Board", "Sector 16", "Sector 17", "Sector 18", "Sector 19", "Sector 23", "Sector 3", "Sector 7", "Sector 9", "Shadipur", "Shanti Vihar", "Shartri Colony", "Shastri Park", "Shiv Colony", "Sidharth Colony", "Sikka Colony", "Sri Nagar", "Sudama Nagar", "Sujjan Singh Park", "Sundal Mohalla", "Sunder Sawari", "Tara Nagar", "Teacher Colony", "Uttam Nagar", "Vikas Nagar", "Vikas Nagar- Murthal Road", "Vishal Nagar", "West Ram Nagar"],
-  "Gannaur": ["Anup Nagar", "B.S.T Colony", "Baddi", "Badi leharari", "Barodth", "Baye barodth", "Bega", "Bhakadpur", "Bhuri", "Bigaan", "Chirsmi", "chotti leharari", "Deha", "Dhatoli", "Dhutri", "Gandhi Nagar", "Gannaur Mandi", "Garhi gulama", "Garhi Kashri", "Gayaspur", "Ghasoli", "Hari Nagar", "Hasanpur", "Janta School", "K.D.Nagar", "Kami", "Khera Taga", "Kot Mohalla", "Kurad", "Ladsoli", "lala Garhi", "Maichand Colony", "Namaste Chowk", "Papnera", "Pardhanwas Mohalla", "Patti bharaman", "Peer garhi", "Pelanda garhi", "Pipli khera", "Rajpura", "Ramnagar", "Rashulpur", "Rehda Basti", "Roshanpur", "Shashtri Nagar", "Shehpur", "Sunfeda", "Tandoli", "Umedgarh", "Vasant Nagar"],
-  "Kharkhoda": ["Badhana", "Bahiyanpur", "Barona", "Bidhallan", "Farmana", "Fathepur", "Firozpur Bangar", "Garhi Sisana", "Gopalpur", "Gorad", "Harshana Kalan", "Jagdishpur", "Jatola", "Jhanjoli", "Jharoth", "Jharothi", "Kakroi", "Katlupur", "Khanda", "Kharkhoda", "Kheri Dhaiya", "Khrumpur", "Kundal", "Leharara", "Livaan", "Mandora", "Mandori", "Matindu", "Mohammdabad", "Mojamnagar", "Nakloi", "Naseebpur Bangar", "Nasirpur Choulka", "Nirthaan", "Nithaan", "Nizampur Khurd", "Nizampur Mazra", "Pai", "Parladpur", "Pipli", "Quali", "Rathdhana", "Redhu", "Rohana", "Rohat", "Shedpur", "Sheri", "Shotti", "Silana", "Sinoli", "Sisana", "Thana Kalan", "Thana Khurd", "Trukhpur"],
-  "Kailana": ["Agawanpur", "Ahulana", "Attal", "Bajana Kalan", "Bajana Khurd", "Balli", "Bhaver", "Bilindpur", "Chatiya", "Gamdaa", "Ghummad", "Heer Mazra", "Jahri", "Jassi Pur", "Kalana", "Kehri", "Khabru", "Mazra", "Naya Bass", "Panchi", "Pugthalla", "Purkash", "Razlu Garhi", "Sandal Kalan", "Sandal Khurd", "Sardaana", "Sazadpur", "Seeya Khera", "Shekpura", "Tavedi", "Tharu"],
-  "Rai Bahalgarh": ["Aterna", "Bad Malik", "Badkhalsha", "Badoli", "Bahalgarh", "Barota", "Behra ( Bakipur)", "Chauhan Joshi", "Chetera", "Dadhi Nangal", "Dipalpur", "Garh Marikpur", "Garh Sejhenpur", "Jagdishpur", "Jainpur", "Jakholi", "Jat Joshi", "Jathadi", "Jatti Kalan", "Jhundpur", "Kamaspur", "Kheri", "Khewara", "Khurampur", "Kundli", "Liwaspur", "Makimpur", "Malikpur", "Manoli", "Mazra", "Mehandipur", "Mimarpur", "Murthal", "Nandnaur", "Nangal", "Nathupur", "Nehra", "Nehri", "Orangabad", "Palada", "Paladi", "Peou Manhari", "Rai", "Raipur", "Rasoi", "Revali", "Saberpur", "Seveli", "Shahpur", "Tanda", "Tikola"],
-  "Gohana": ["Abadi rattangarh", "Adarsh Nagar", "Badota", "Badwasni", "Baggad", "Barota", "Bhaadi", "Bhatana", "Bhatgaon dugran", "Bhatgaon dugran garhi haqiqat", "Bhatgaon maalyan", "Bidghal", "Bohelaa", "Chatiya Deva", "Chitana", "Chopra Colony", "citawali", "Dariyapur Basti", "Dodavaa", "Dubeta", "Gamadi", "Gangser", "Garhi Naamdar Khaa", "Garhi Sarai naamdaar kha", "Garhi Ujala khaa", "Gohana City", "Gohana Mandi", "Grina", "Gudaa", "Hasangarh", "Hullaheri", "Jaji", "Jholly", "Jind Road", "Jolly", "Jua", "Kakaana", "Kalana Khash", "Kashandi", "Kasnada", "Keravedi", "Khandrai", "Khanpur kalan", "Kheri", "Kheri damkan", "Khijrpur jaat mazra", "Kilhond", "Lath", "Laxmi Nagar", "Luhari Tibba", "Machri", "Mahalana", "Mahipur", "Mazri", "Mehra", "Mohana", "Nagar", "Nayat", "Nenna", "Pinana", "Punjabi Colony", "Remana", "Rolad", "Sainipura", "Salarpur mazra", "Salimsar mazra", "Silampur trally", "Sonipat Road", "SP Majra", "Surgathal", "Thehad", "Thihaad kalan", "Thihaad khurd", "Vishnu Nagar", "Wazirpur"]
+    "Sonipat": ["4 Marla", "8 Marla", "Adersh Nagar", "Anand Nagar", "Arya Nagar", "Ashok Nagar", "Ashok Vihar", "Baba Colony", "Badwasni Gaon", "Bandepur", "Bara Bagad", "Batra Colony", "Bayanpur", "Bhagat Pura", "Bhagat Singh Colony", "Bharam Colony", "Bharam Nagar", "Bharatpuri", "Bhattan Mohalla", "Bheem Nagar", "Chawla Colony", "Chintpurni Colony", "Chitana Gaon", "Chotu Ram Chowk", "Chouhan Colony", "Davru Gaon", "Davru Road", "Defence Colony", "Deha Basti", "Delhi Camp", "Dev Nagar", "Dhanak Basti", "Dhiya Colony'", "Double Story", "Faj Bazar", "Faraz Khana", "Ganj Bazar", "Garh Sahajanpur", "Garhi Bharmana", "Garhi Gasita", "Gokul Nagar", "Govind Nagar", "Hanuman Nagar", "Hem Park", "Hullaheri Gaon", "Indian Colony", "Indra Colony", "Indra Colony, Kailash Pur", "Jamalpura", "Janta Colony", "Jatti Kalan", "Jatwara", "Jawahar Nagar", "Jeevan Nagar", "Kaath Mandi", "Kabir Nagar-Kalupur", "Kabir Pur", "Kachhey Querter", "Kailash Colony", "Kakroi Road", "Kalash Colony", "Kalupur", "Katth Mandi", "Khan Colony", "Khari Kwa", "Kot Mohalla", "Krishan Pura", "Krishana Nagar", "Kriti Nagar", "Kumhar Gate", "Lajpat Nagar", "Lal Darwaja", "Lehrara", "Luxmi Nagar", "Mahabir Colony", "Malviya Nagar", "Mamchand Colony", "Maya Puri", "Mc Colony", "Mirch Mandi", "Mission Road", "Model Town", "Mohalla Kalan", "Mohan Nagar", "Mohanpura", "Nandwani Nagar", "Narender Nagar", "New Jeevan Nagar", "Old Housing Board Colony", "Om Colony", "Omnagar", "Other", "Pancham Nagar", "Parbhu Nagar", "Pargati Nagar", "Patel Nagar", "Prem Nagar", "Prem Nagar- Kakroi Road", "Prem Nagar-Behind Bus Stand", "Pwd Colony", "Railway Colony", "Raj Mohalla", "Rajiv Colony", "Rajiv Nagar", "Ram Nagar", "Rishi Colony", "Rk Colony", "Roop Nagar", "Sabun Darwaja", "Sai Baba Colony", "Sainipura", "Sant Garb Dass Nagar", "Sector 1", "Sector 10", "Sector 11", "Sector 12", "Sector 13", "Sector 14", "Sector 15", "Sector 15 Housing Board", "Sector 16", "Sector 17", "Sector 18", "Sector 19", "Sector 23", "Sector 3", "Sector 7", "Sector 9", "Shadipur", "Shanti Vihar", "Shartri Colony", "Shastri Park", "Shiv Colony", "Sidharth Colony", "Sikka Colony", "Sri Nagar", "Sudama Nagar", "Sujjan Singh Park", "Sundal Mohalla", "Sunder Sawari", "Tara Nagar", "Teacher Colony", "Uttam Nagar", "Vikas Nagar", "Vikas Nagar- Murthal Road", "Vishal Nagar", "West Ram Nagar"],
+    "Gannaur": ["Anup Nagar", "B.S.T Colony", "Baddi", "Badi leharari", "Barodth", "Baye barodth", "Bega", "Bhakadpur", "Bhuri", "Bigaan", "Chirsmi", "chotti leharari", "Deha", "Dhatoli", "Dhutri", "Gandhi Nagar", "Gannaur Mandi", "Garhi gulama", "Garhi Kashri", "Gayaspur", "Ghasoli", "Hari Nagar", "Hasanpur", "Janta School", "K.D.Nagar", "Kami", "Khera Taga", "Kot Mohalla", "Kurad", "Ladsoli", "lala Garhi", "Maichand Colony", "Namaste Chowk", "Papnera", "Pardhanwas Mohalla", "Patti bharaman", "Peer garhi", "Pelanda garhi", "Pipli khera", "Rajpura", "Ramnagar", "Rashulpur", "Rehda Basti", "Roshanpur", "Shashtri Nagar", "Shehpur", "Sunfeda", "Tandoli", "Umedgarh", "Vasant Nagar"],
+    "Kharkhoda": ["Badhana", "Bahiyanpur", "Barona", "Bidhallan", "Farmana", "Fathepur", "Firozpur Bangar", "Garhi Sisana", "Gopalpur", "Gorad", "Harshana Kalan", "Jagdishpur", "Jatola", "Jhanjoli", "Jharoth", "Jharothi", "Kakroi", "Katlupur", "Khanda", "Kharkhoda", "Kheri Dhaiya", "Khrumpur", "Kundal", "Leharara", "Livaan", "Mandora", "Mandori", "Matindu", "Mohammdabad", "Mojamnagar", "Nakloi", "Naseebpur Bangar", "Nasirpur Choulka", "Nirthaan", "Nithaan", "Nizampur Khurd", "Nizampur Mazra", "Pai", "Parladpur", "Pipli", "Quali", "Rathdhana", "Redhu", "Rohana", "Rohat", "Shedpur", "Sheri", "Shotti", "Silana", "Sinoli", "Sisana", "Thana Kalan", "Thana Khurd", "Trukhpur"],
+    "Kailana": ["Agawanpur", "Ahulana", "Attal", "Bajana Kalan", "Bajana Khurd", "Balli", "Bhaver", "Bilindpur", "Chatiya", "Gamdaa", "Ghummad", "Heer Mazra", "Jahri", "Jassi Pur", "Kalana", "Kehri", "Khabru", "Mazra", "Naya Bass", "Panchi", "Pugthalla", "Purkash", "Razlu Garhi", "Sandal Kalan", "Sandal Khurd", "Sardaana", "Sazadpur", "Seeya Khera", "Shekpura", "Tavedi", "Tharu"],
+    "Rai Bahalgarh": ["Aterna", "Bad Malik", "Badkhalsha", "Badoli", "Bahalgarh", "Barota", "Behra ( Bakipur)", "Chauhan Joshi", "Chetera", "Dadhi Nangal", "Dipalpur", "Garh Marikpur", "Garh Sejhenpur", "Jagdishpur", "Jainpur", "Jakholi", "Jat Joshi", "Jathadi", "Jatti Kalan", "Jhundpur", "Kamaspur", "Kheri", "Khewara", "Khurampur", "Kundli", "Liwaspur", "Makimpur", "Malikpur", "Manoli", "Mazra", "Mehandipur", "Mimarpur", "Murthal", "Nandnaur", "Nangal", "Nathupur", "Nehra", "Nehri", "Orangabad", "Palada", "Paladi", "Peou Manhari", "Rai", "Raipur", "Rasoi", "Revali", "Saberpur", "Seveli", "Shahpur", "Tanda", "Tikola"],
+    "Gohana": ["Abadi rattangarh", "Adarsh Nagar", "Badota", "Badwasni", "Baggad", "Barota", "Bhaadi", "Bhatana", "Bhatgaon dugran", "Bhatgaon dugran garhi haqiqat", "Bhatgaon maalyan", "Bidghal", "Bohelaa", "Chatiya Deva", "Chitana", "Chopra Colony", "citawali", "Dariyapur Basti", "Dodavaa", "Dubeta", "Gamadi", "Gangser", "Garhi Naamdar Khaa", "Garhi Sarai naamdaar kha", "Garhi Ujala khaa", "Gohana City", "Gohana Mandi", "Grina", "Gudaa", "Hasangarh", "Hullaheri", "Jaji", "Jholly", "Jind Road", "Jolly", "Jua", "Kakaana", "Kalana Khash", "Kashandi", "Kasnada", "Keravedi", "Khandrai", "Khanpur kalan", "Kheri", "Kheri damkan", "Khijrpur jaat mazra", "Kilhond", "Lath", "Laxmi Nagar", "Luhari Tibba", "Machri", "Mahalana", "Mahipur", "Mazri", "Mehra", "Mohana", "Nagar", "Nayat", "Nenna", "Pinana", "Punjabi Colony", "Remana", "Rolad", "Sainipura", "Salarpur mazra", "Salimsar mazra", "Silampur trally", "Sonipat Road", "SP Majra", "Surgathal", "Thehad", "Thihaad kalan", "Thihaad khurd", "Vishnu Nagar", "Wazirpur"]
 };
 
 const INITIAL_PROPERTIES: Property[] = [
@@ -236,16 +237,49 @@ interface HeaderProps {
 
 const Header: React.FC<HeaderProps> = ({ setCurrentView }) => {
     const { isLoggedIn, user, login, logout, openBookingModal, properties } = useContext(AppContext);
+    const googleSignInButton = useRef<HTMLDivElement>(null);
 
-    const handleLogin = () => {
-        // Mock Google Login
-        const email = prompt("Enter your email to login (e.g., user@example.com or admin@example.com)");
-        if (email) {
-            const isAdmin = email === 'admin@example.com';
-            login({ name: email.split('@')[0], email, isAdmin });
+    const handleCredentialResponse = (response: any) => {
+        try {
+            const credential = response.credential;
+            const payload = JSON.parse(atob(credential.split('.')[1]));
+            
+            const email = payload.email;
+            if (email) {
+                const isAdmin = email === 'admin@example.com';
+                login({ 
+                    name: payload.name, 
+                    email: email, 
+                    isAdmin: isAdmin,
+                    picture: payload.picture
+                });
+            }
+        } catch (error) {
+            console.error("Error decoding JWT or logging in:", error);
+            alert("There was an error logging in. Please try again.");
         }
     };
     
+    useEffect(() => {
+        if (!isLoggedIn && googleSignInButton.current) {
+            if ((window as any).google) {
+                (window as any).google.accounts.id.initialize({
+                    // IMPORTANT: Create your own Google Client ID and replace this placeholder.
+                    // Go to https://console.cloud.google.com/apis/credentials to create one.
+                    client_id: "YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com", 
+                    callback: handleCredentialResponse
+                });
+                
+                (window as any).google.accounts.id.renderButton(
+                    googleSignInButton.current,
+                    { theme: "outline", size: "large", text: "continue_with", shape: "rectangular" } 
+                );
+                
+                (window as any).google.accounts.id.prompt(); 
+            }
+        }
+    }, [isLoggedIn]);
+
     const handleCartClick = () => {
         const testProperty = properties.find(p => p.rent === 1);
         if (testProperty) {
@@ -273,15 +307,14 @@ const Header: React.FC<HeaderProps> = ({ setCurrentView }) => {
                     <div className="flex items-center space-x-4">
                         {isLoggedIn ? (
                             <div className="flex items-center space-x-3">
+                                {user?.picture && <img src={user.picture} alt={user.name} className="h-8 w-8 rounded-full" />}
                                 <span className="text-sm font-medium text-gray-700 hidden sm:block">Welcome, {user?.name}</span>
                                 <button onClick={logout} className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
                                     Logout
                                 </button>
                             </div>
                         ) : (
-                            <button onClick={handleLogin} className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                                Login with Google
-                            </button>
+                           <div ref={googleSignInButton}></div>
                         )}
                          <button onClick={handleCartClick} className="p-2 rounded-full text-gray-600 hover:bg-gray-200 hover:text-blue-600 transition-colors">
                             <CartIcon />
