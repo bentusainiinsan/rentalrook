@@ -1,9 +1,8 @@
-
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <meta charset="UTF-ag-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="./vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Sonipat Home Service - Rent Properties in Sonipat</title>
     <meta name="description" content="Find and list rooms, shops, houses, factories, and godowns for rent in Sonipat, Kundli, Rai, Murthal, Ganaur, Kharkhoda, Gohana, and Bahalgarh. Easy listings and verified properties." />
@@ -13,6 +12,8 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+    <!-- Add Babel Standalone for in-browser JSX/TSX transpilation -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <style>
       body {
         font-family: 'Poppins', sans-serif;
@@ -30,6 +31,7 @@
 </head>
   <body>
     <div id="root"></div>
-    <script type="module" src="/index.tsx"></script>
+    <!-- Change script type to text/babel and use relative path for GitHub pages -->
+    <script type="text/babel" data-type="module" src="./index.tsx"></script>
   </body>
 </html>
