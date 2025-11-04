@@ -19,6 +19,15 @@ enum PropertyType {
     Kothi = 'कोठी',
 }
 
+interface PropertyFacilities {
+    attachedToilet: boolean;
+    attachedKitchen: boolean;
+    ac: boolean;
+    cooler: boolean;
+    bed: boolean;
+    fan: boolean;
+}
+
 interface Property {
     id: string;
     title: string;
@@ -36,6 +45,7 @@ interface Property {
     };
     description: string;
     isVerified: boolean;
+    facilities: PropertyFacilities;
 }
 
 interface BookingDetails {
@@ -90,6 +100,7 @@ const INITIAL_PROPERTIES: Property[] = [
         owner: { name: 'Test Owner', phone: '9876543210' },
         description: 'This is a test property with a price of Rs. 1 for payment gateway testing.',
         isVerified: true,
+        facilities: { attachedToilet: true, attachedKitchen: false, ac: false, cooler: true, bed: true, fan: true },
     },
     {
         id: 'prop_123',
@@ -102,6 +113,7 @@ const INITIAL_PROPERTIES: Property[] = [
         owner: { name: 'Ramesh Kumar', phone: '8816014071' },
         description: 'A beautiful and spacious 2 BHK house available for rent in a prime location. Close to market and school.',
         isVerified: true,
+        facilities: { attachedToilet: true, attachedKitchen: true, ac: true, cooler: false, bed: false, fan: true },
     },
     {
         id: 'prop_456',
@@ -114,6 +126,7 @@ const INITIAL_PROPERTIES: Property[] = [
         owner: { name: 'Sunita Devi', phone: '9998887776' },
         description: 'Prime location shop suitable for any business. High footfall area.',
         isVerified: false,
+        facilities: { attachedToilet: true, attachedKitchen: false, ac: false, cooler: false, bed: false, fan: true },
     },
      {
         id: 'prop_789',
@@ -126,6 +139,7 @@ const INITIAL_PROPERTIES: Property[] = [
         owner: { name: 'Anil Singhania', phone: '9123456789' },
         description: 'Massive 5000 sq. ft. godown available for rent in Kundli. Suitable for storage and logistics.',
         isVerified: true,
+        facilities: { attachedToilet: true, attachedKitchen: false, ac: false, cooler: false, bed: false, fan: false },
     }
 ];
 
@@ -159,8 +173,6 @@ const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
 
     const addProperty = (property: Property) => {
         setProperties(prev => [property, ...prev]);
-        // In a real app, you would send this data to your backend/Google Sheet here.
-        // And trigger an email notification.
         alert('Property listed successfully! (Locally)');
     };
     
@@ -189,17 +201,14 @@ const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     };
 
     const submitBooking = (details: BookingDetails): Promise<{ success: boolean, transactionId?: string }> => {
-        // This function simulates the payment process
         return new Promise((resolve) => {
             console.log("Booking Details:", details);
             console.log("For Property:", bookingProperty);
-
-            // Simulating payment success
             setTimeout(() => {
                 const transactionId = `txn_${Date.now()}`;
                 console.log(`Payment successful! Transaction ID: ${transactionId}`);
                 resolve({ success: true, transactionId });
-            }, 1500); // Simulate network delay
+            }, 1500);
         });
     };
 
@@ -363,6 +372,31 @@ const LocationIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-
 const OwnerIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1 inline-block" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>;
 const PhoneIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1 inline-block" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>;
 const VerifiedIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>;
+const ToiletIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M5 2a1 1 0 011 1v1h8V3a1 1 0 112 0v1h1a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V6a2 2 0 012-2h1V3a1 1 0 011-1zm1 10a1 1 0 000 2h6a1 1 0 100-2H6z" clipRule="evenodd" /></svg>;
+const KitchenIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zM4 6a2 2 0 012-2h8a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm2 2v2a1 1 0 102 0V8a1 1 0 10-2 0zm5 0v2a1 1 0 102 0V8a1 1 0 10-2 0z" /></svg>;
+const ACIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM7.707 5.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L10.586 10 7.707 7.121a1 1 0 01-1.414 0z" clipRule="evenodd" /></svg>;
+const BedIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z" /></svg>;
+const FanIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM10 2a.75.75 0 01.75.75v4.5a.75.75 0 01-1.5 0v-4.5A.75.75 0 0110 2zM10 12a.75.75 0 01.75.75v4.5a.75.75 0 01-1.5 0v-4.5A.75.75 0 0110 12zm5-2.25a.75.75 0 00-1.5 0v4.5a.75.75 0 001.5 0v-4.5zM5 9.75a.75.75 0 01.75-.75h4.5a.75.75 0 010 1.5h-4.5a.75.75 0 01-.75-.75z" clipRule="evenodd" /></svg>;
+const CoolerIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3 3a1 1 0 011-1h12a1 1 0 011 1v14a1 1 0 01-1 1H4a1 1 0 01-1-1V3zm2 2v10h10V5H5zm2 2h6v1H7V7zm0 3h6v1H7v-1zm0 3h6v1H7v-1z" clipRule="evenodd" /></svg>;
+
+
+const FacilityIcon: React.FC<{facility: keyof PropertyFacilities, isAvailable: boolean}> = ({ facility, isAvailable }) => {
+    if (!isAvailable) return null;
+    const icons = {
+        attachedToilet: { icon: <ToiletIcon />, label: 'Toilet' },
+        attachedKitchen: { icon: <KitchenIcon />, label: 'Kitchen' },
+        ac: { icon: <ACIcon />, label: 'AC' },
+        cooler: { icon: <CoolerIcon />, label: 'Cooler' },
+        bed: { icon: <BedIcon />, label: 'Bed' },
+        fan: { icon: <FanIcon />, label: 'Fan' },
+    };
+    return (
+        <div className="flex items-center space-x-1 text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded-full" title={icons[facility].label}>
+            {icons[facility].icon}
+            <span>{icons[facility].label}</span>
+        </div>
+    );
+};
 
 
 const PropertyCard: React.FC<PropertyCardProps> = ({ property }) => {
@@ -403,6 +437,11 @@ const PropertyCard: React.FC<PropertyCardProps> = ({ property }) => {
                     <h3 className="text-xl font-bold text-gray-800 truncate">{property.title}</h3>
                     <p className="text-sm text-gray-500 mt-1 flex items-center"><LocationIcon />{property.location.area}, {property.location.block}</p>
                     <p className="text-gray-700 mt-2">{isLoggedIn ? property.address : 'Login to see full address'}</p>
+                    <div className="flex flex-wrap gap-2 my-3">
+                        {Object.entries(property.facilities).map(([key, value]) => (
+                            <FacilityIcon key={key} facility={key as keyof PropertyFacilities} isAvailable={value} />
+                        ))}
+                    </div>
                     <p className="text-sm text-gray-600 my-2 h-10 overflow-hidden">{property.description}</p>
                 </div>
                 <div>
@@ -441,6 +480,13 @@ const PropertyList: React.FC = () => {
         setSelectedArea('All');
     }, [selectedBlock]);
 
+    const handleClearFilters = () => {
+        setSelectedBlock('All');
+        setSelectedArea('All');
+        setSelectedType('All');
+        setSearchTerm('');
+    };
+
     const filteredProperties = useMemo(() => {
         return properties.filter(p => {
             const blockMatch = selectedBlock === 'All' || p.location.block === selectedBlock;
@@ -448,7 +494,8 @@ const PropertyList: React.FC = () => {
             const typeMatch = selectedType === 'All' || p.type === selectedType;
             const searchMatch = searchTerm === '' || 
                                 p.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                                p.location.area.toLowerCase().includes(searchTerm.toLowerCase());
+                                p.location.area.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                p.type.toLowerCase().includes(searchTerm.toLowerCase());
             return blockMatch && areaMatch && typeMatch && searchMatch;
         });
     }, [properties, selectedBlock, selectedArea, selectedType, searchTerm]);
@@ -457,10 +504,10 @@ const PropertyList: React.FC = () => {
         <div>
             <div className="bg-white/80 backdrop-blur-md rounded-xl shadow-lg p-4 md:p-6 mb-8">
                 <h2 className="text-2xl font-bold text-gray-800 mb-4">Find Your Perfect Rental Property</h2>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
                     <input
                         type="text"
-                        placeholder="Search by title or area..."
+                        placeholder="Search by title, area, or type..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
@@ -496,6 +543,12 @@ const PropertyList: React.FC = () => {
                             <option key={type} value={type}>{type}</option>
                         ))}
                     </select>
+                    <button
+                        onClick={handleClearFilters}
+                        className="w-full px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+                    >
+                        Clear Filters
+                    </button>
                 </div>
             </div>
 
@@ -527,12 +580,64 @@ const AddPropertyForm: React.FC = () => {
     const [description, setDescription] = useState('');
     const [ownerName, setOwnerName] = useState(user?.name || '');
     const [ownerPhone, setOwnerPhone] = useState('');
+    const [uploadedImages, setUploadedImages] = useState<string[]>([]);
+    const [facilities, setFacilities] = useState<PropertyFacilities>({
+        attachedToilet: false,
+        attachedKitchen: false,
+        ac: false,
+        cooler: false,
+        bed: false,
+        fan: false,
+    });
+    
+    const facilityLabels: Record<keyof PropertyFacilities, string> = {
+        attachedToilet: 'Attached Toilet',
+        attachedKitchen: 'Attached Kitchen',
+        ac: 'AC',
+        cooler: 'Cooler',
+        bed: 'Bed',
+        fan: 'Fan'
+    };
 
     useEffect(() => {
         if(user && !ownerName) {
             setOwnerName(user.name);
         }
     }, [user, ownerName]);
+    
+    const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files) {
+            const remainingSlots = 5 - uploadedImages.length;
+            if (remainingSlots <= 0) {
+                alert("You have already uploaded the maximum of 5 images.");
+                return;
+            }
+    
+            const filesToUpload = Array.from(e.target.files).slice(0, remainingSlots);
+            
+            const imagePromises = filesToUpload.map(file => {
+                return new Promise<string>((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onloadend = () => resolve(reader.result as string);
+                    reader.onerror = reject;
+                    reader.readAsDataURL(file);
+                });
+            });
+    
+            Promise.all(imagePromises).then(base64Images => {
+                setUploadedImages(prev => [...prev, ...base64Images]);
+            }).catch(error => console.error("Error reading files:", error));
+        }
+    };
+
+    const removeImage = (index: number) => {
+        setUploadedImages(prev => prev.filter((_, i) => i !== index));
+    };
+    
+    const handleFacilityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const { name, checked } = e.target;
+        setFacilities(prev => ({ ...prev, [name]: checked }));
+    };
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -550,8 +655,9 @@ const AddPropertyForm: React.FC = () => {
             rent: parseInt(rent, 10),
             description,
             owner: { name: ownerName, phone: ownerPhone },
-            isVerified: false, // New properties are unverified by default
-            images: [
+            isVerified: false, 
+            facilities,
+            images: uploadedImages.length > 0 ? uploadedImages : [
                 `https://picsum.photos/seed/${Date.now()}/800/600`,
                 `https://picsum.photos/seed/${Date.now()+1}/800/600`,
                 `https://picsum.photos/seed/${Date.now()+2}/800/600`
@@ -564,6 +670,8 @@ const AddPropertyForm: React.FC = () => {
         setAddress('');
         setDescription('');
         setOwnerPhone('');
+        setUploadedImages([]);
+        setFacilities({ attachedToilet: false, attachedKitchen: false, ac: false, cooler: false, bed: false, fan: false });
     };
     
     const handleBlockChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -575,7 +683,7 @@ const AddPropertyForm: React.FC = () => {
     return (
         <div className="max-w-2xl mx-auto bg-white/90 backdrop-blur-sm p-8 rounded-xl shadow-lg">
             <h2 className="text-3xl font-bold text-gray-800 mb-6">List Your Property</h2>
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-6">
                 <div>
                     <label className="block text-sm font-medium text-gray-700">Property Title</label>
                     <input type="text" value={title} onChange={e => setTitle(e.target.value)} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"/>
@@ -613,6 +721,47 @@ const AddPropertyForm: React.FC = () => {
                     <label className="block text-sm font-medium text-gray-700">Full Address</label>
                     <input type="text" value={address} onChange={e => setAddress(e.target.value)} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"/>
                 </div>
+                
+                 <div>
+                    <label className="block text-sm font-medium text-gray-700">Upload Photos (Max 5)</label>
+                    <input 
+                        type="file" 
+                        multiple 
+                        accept="image/*" 
+                        onChange={handleImageChange} 
+                        disabled={uploadedImages.length >= 5}
+                        className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-50"
+                    />
+                    {uploadedImages.length >= 5 && (
+                       <p className="text-xs text-red-600 mt-1">You have reached the maximum limit of 5 photos.</p>
+                   )}
+                    <div className="mt-2 flex flex-wrap gap-2">
+                        {uploadedImages.map((image, index) => (
+                            <div key={index} className="relative group">
+                                <img src={image} alt={`preview ${index}`} className="h-20 w-20 object-cover rounded-md"/>
+                                <button 
+                                    type="button"
+                                    onClick={() => removeImage(index)} 
+                                    className="absolute top-1 right-1 bg-red-600 text-white rounded-full h-5 w-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity focus:opacity-100"
+                                >
+                                    &times;
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                <div>
+                    <label className="block text-sm font-medium text-gray-700">Facilities</label>
+                    <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-2">
+                        {Object.keys(facilityLabels).map(key => (
+                            <label key={key} className="flex items-center space-x-2">
+                                <input type="checkbox" name={key} checked={facilities[key as keyof PropertyFacilities]} onChange={handleFacilityChange} className="rounded text-blue-600 focus:ring-blue-500" />
+                                <span className="text-sm text-gray-600">{facilityLabels[key as keyof PropertyFacilities]}</span>
+                            </label>
+                        ))}
+                    </div>
+                </div>
 
                 <div>
                     <label htmlFor="description" className="block text-sm font-medium text-gray-700">Description</label>
@@ -629,8 +778,6 @@ const AddPropertyForm: React.FC = () => {
                         <input type="tel" value={ownerPhone} onChange={e => setOwnerPhone(e.target.value)} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"/>
                     </div>
                 </div>
-
-                <p className="text-xs text-gray-500">Note: For this demo, only 3 placeholder images will be added automatically upon submission.</p>
 
                 <button type="submit" className="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-md hover:bg-blue-700 transition-colors">List My Property</button>
             </form>
@@ -704,7 +851,6 @@ const BookingModal: React.FC = () => {
 
     useEffect(() => {
         if (!isBookingModalOpen) {
-            // Reset form when modal closes
             setCustomerName('');
             setMobileNumber('');
             setEmail('');
@@ -804,7 +950,7 @@ const App: React.FC = () => {
     useEffect(() => {
         const themeInterval = setInterval(() => {
             setThemeIndex((prevIndex) => (prevIndex + 1) % backgroundThemes.length);
-        }, 60000); // Change theme every minute
+        }, 60000); 
 
         return () => clearInterval(themeInterval);
     }, []);
