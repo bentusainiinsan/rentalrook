@@ -144,13 +144,15 @@ const INITIAL_PROPERTIES: Property[] = [
 ];
 
 // --- BUNDLED FROM context/AppContext.tsx ---
+type PropertyFormData = Omit<Property, 'id' | 'isVerified'>;
 interface AppContextType {
     user: User | null;
     isLoggedIn: boolean;
     login: (user: User) => void;
     logout: () => void;
     properties: Property[];
-    addProperty: (property: Property) => void;
+    addProperty: (propertyData: PropertyFormData) => void;
+    updateProperty: (updatedProperty: Property) => void;
     deleteProperty: (propertyId: string) => void;
     togglePropertyVerification: (propertyId: string) => void;
     isBookingModalOpen: boolean;
@@ -171,9 +173,19 @@ const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     const login = (userData: User) => setUser(userData);
     const logout = () => setUser(null);
 
-    const addProperty = (property: Property) => {
-        setProperties(prev => [property, ...prev]);
+    const addProperty = (propertyData: PropertyFormData) => {
+        const newProperty: Property = {
+            ...propertyData,
+            id: `prop_${Date.now()}`,
+            isVerified: false,
+        };
+        setProperties(prev => [newProperty, ...prev]);
         alert('Property listed successfully! (Locally)');
+    };
+
+    const updateProperty = (updatedProperty: Property) => {
+        setProperties(prev => prev.map(p => (p.id === updatedProperty.id ? updatedProperty : p)));
+        alert('Property updated successfully! (Locally)');
     };
     
     const deleteProperty = (propertyId: string) => {
@@ -220,6 +232,7 @@ const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
             logout,
             properties,
             addProperty,
+            updateProperty,
             deleteProperty,
             togglePropertyVerification,
             isBookingModalOpen,
@@ -276,7 +289,7 @@ const Header: React.FC<HeaderProps> = ({ setCurrentView }) => {
                     </div>
                     <nav className="hidden md:flex items-center space-x-6">
                          <button onClick={() => setCurrentView('home')} className="text-gray-600 hover:text-blue-600 font-medium transition-colors">Home</button>
-                        {isLoggedIn && <button onClick={() => setCurrentView('addProperty')} className="text-gray-600 hover:text-blue-600 font-medium transition-colors">List Property</button>}
+                        {isLoggedIn && !user?.isAdmin && <button onClick={() => setCurrentView('addProperty')} className="text-gray-600 hover:text-blue-600 font-medium transition-colors">List Property</button>}
                         {user?.isAdmin && <button onClick={() => setCurrentView('admin')} className="text-red-600 hover:text-red-800 font-bold transition-colors">Admin Panel</button>}
                     </nav>
                     <div className="flex items-center space-x-4">
@@ -569,8 +582,14 @@ const PropertyList: React.FC = () => {
 };
 
 // --- BUNDLED FROM components/AddPropertyForm.tsx ---
-const AddPropertyForm: React.FC = () => {
-    const { addProperty, user } = useContext(AppContext);
+interface AddPropertyFormProps {
+    propertyToEdit?: Property | null;
+    onSave: (data: PropertyFormData) => void;
+    onCancel: () => void;
+}
+
+const AddPropertyForm: React.FC<AddPropertyFormProps> = ({ propertyToEdit, onSave, onCancel }) => {
+    const { user } = useContext(AppContext);
     const [title, setTitle] = useState('');
     const [type, setType] = useState<PropertyType>(PropertyType.Room);
     const [block, setBlock] = useState(Object.keys(LOCATION_DATA)[0]);
@@ -578,33 +597,35 @@ const AddPropertyForm: React.FC = () => {
     const [address, setAddress] = useState('');
     const [rent, setRent] = useState('');
     const [description, setDescription] = useState('');
-    const [ownerName, setOwnerName] = useState(user?.name || '');
+    const [ownerName, setOwnerName] = useState('');
     const [ownerPhone, setOwnerPhone] = useState('');
     const [uploadedImages, setUploadedImages] = useState<string[]>([]);
     const [facilities, setFacilities] = useState<PropertyFacilities>({
-        attachedToilet: false,
-        attachedKitchen: false,
-        ac: false,
-        cooler: false,
-        bed: false,
-        fan: false,
+        attachedToilet: false, attachedKitchen: false, ac: false, cooler: false, bed: false, fan: false,
     });
-    
-    const facilityLabels: Record<keyof PropertyFacilities, string> = {
-        attachedToilet: 'Attached Toilet',
-        attachedKitchen: 'Attached Kitchen',
-        ac: 'AC',
-        cooler: 'Cooler',
-        bed: 'Bed',
-        fan: 'Fan'
-    };
 
-    useEffect(() => {
-        if(user && !ownerName) {
-            setOwnerName(user.name);
-        }
-    }, [user, ownerName]);
+    const facilityLabels: Record<keyof PropertyFacilities, string> = {
+        attachedToilet: 'Attached Toilet', attachedKitchen: 'Attached Kitchen', ac: 'AC', cooler: 'Cooler', bed: 'Bed', fan: 'Fan'
+    };
     
+    useEffect(() => {
+        if (propertyToEdit) {
+            setTitle(propertyToEdit.title);
+            setType(propertyToEdit.type);
+            setBlock(propertyToEdit.location.block);
+            setArea(propertyToEdit.location.area);
+            setAddress(propertyToEdit.address);
+            setRent(propertyToEdit.rent.toString());
+            setDescription(propertyToEdit.description);
+            setOwnerName(propertyToEdit.owner.name);
+            setOwnerPhone(propertyToEdit.owner.phone);
+            setUploadedImages(propertyToEdit.images);
+            setFacilities(propertyToEdit.facilities);
+        } else {
+            setOwnerName(user?.name || '');
+        }
+    }, [propertyToEdit, user]);
+
     const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files) {
             const remainingSlots = 5 - uploadedImages.length;
@@ -612,9 +633,7 @@ const AddPropertyForm: React.FC = () => {
                 alert("You have already uploaded the maximum of 5 images.");
                 return;
             }
-    
             const filesToUpload = Array.from(e.target.files).slice(0, remainingSlots);
-            
             const imagePromises = filesToUpload.map(file => {
                 return new Promise<string>((resolve, reject) => {
                     const reader = new FileReader();
@@ -623,7 +642,6 @@ const AddPropertyForm: React.FC = () => {
                     reader.readAsDataURL(file);
                 });
             });
-    
             Promise.all(imagePromises).then(base64Images => {
                 setUploadedImages(prev => [...prev, ...base64Images]);
             }).catch(error => console.error("Error reading files:", error));
@@ -641,13 +659,8 @@ const AddPropertyForm: React.FC = () => {
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (!user) {
-            alert('You must be logged in to list a property.');
-            return;
-        }
-
-        const newProperty: Property = {
-            id: `prop_${Date.now()}`,
+        
+        const propertyData: PropertyFormData = {
             title,
             type,
             location: { block, area },
@@ -655,7 +668,6 @@ const AddPropertyForm: React.FC = () => {
             rent: parseInt(rent, 10),
             description,
             owner: { name: ownerName, phone: ownerPhone },
-            isVerified: false, 
             facilities,
             images: uploadedImages.length > 0 ? uploadedImages : [
                 `https://picsum.photos/seed/${Date.now()}/800/600`,
@@ -663,15 +675,7 @@ const AddPropertyForm: React.FC = () => {
                 `https://picsum.photos/seed/${Date.now()+2}/800/600`
             ]
         };
-        addProperty(newProperty);
-        // Reset form
-        setTitle('');
-        setRent('');
-        setAddress('');
-        setDescription('');
-        setOwnerPhone('');
-        setUploadedImages([]);
-        setFacilities({ attachedToilet: false, attachedKitchen: false, ac: false, cooler: false, bed: false, fan: false });
+        onSave(propertyData);
     };
     
     const handleBlockChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -681,8 +685,8 @@ const AddPropertyForm: React.FC = () => {
     };
 
     return (
-        <div className="max-w-2xl mx-auto bg-white/90 backdrop-blur-sm p-8 rounded-xl shadow-lg">
-            <h2 className="text-3xl font-bold text-gray-800 mb-6">List Your Property</h2>
+       <div className="max-w-2xl mx-auto bg-white/90 backdrop-blur-sm p-8 rounded-xl shadow-lg mt-8">
+            <h2 className="text-3xl font-bold text-gray-800 mb-6">{propertyToEdit ? 'Edit Property' : 'List Your Property'}</h2>
             <form onSubmit={handleSubmit} className="space-y-6">
                 <div>
                     <label className="block text-sm font-medium text-gray-700">Property Title</label>
@@ -724,28 +728,13 @@ const AddPropertyForm: React.FC = () => {
                 
                  <div>
                     <label className="block text-sm font-medium text-gray-700">Upload Photos (Max 5)</label>
-                    <input 
-                        type="file" 
-                        multiple 
-                        accept="image/*" 
-                        onChange={handleImageChange} 
-                        disabled={uploadedImages.length >= 5}
-                        className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-50"
-                    />
-                    {uploadedImages.length >= 5 && (
-                       <p className="text-xs text-red-600 mt-1">You have reached the maximum limit of 5 photos.</p>
-                   )}
+                    <input type="file" multiple accept="image/*" onChange={handleImageChange} disabled={uploadedImages.length >= 5} className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-50" />
+                    {uploadedImages.length >= 5 && <p className="text-xs text-red-600 mt-1">You have reached the maximum limit of 5 photos.</p>}
                     <div className="mt-2 flex flex-wrap gap-2">
                         {uploadedImages.map((image, index) => (
                             <div key={index} className="relative group">
                                 <img src={image} alt={`preview ${index}`} className="h-20 w-20 object-cover rounded-md"/>
-                                <button 
-                                    type="button"
-                                    onClick={() => removeImage(index)} 
-                                    className="absolute top-1 right-1 bg-red-600 text-white rounded-full h-5 w-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity focus:opacity-100"
-                                >
-                                    &times;
-                                </button>
+                                <button type="button" onClick={() => removeImage(index)} className="absolute top-1 right-1 bg-red-600 text-white rounded-full h-5 w-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity focus:opacity-100">&times;</button>
                             </div>
                         ))}
                     </div>
@@ -764,22 +753,25 @@ const AddPropertyForm: React.FC = () => {
                 </div>
 
                 <div>
-                    <label htmlFor="description" className="block text-sm font-medium text-gray-700">Description</label>
-                    <textarea id="description" value={description} onChange={e => setDescription(e.target.value)} rows={4} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"/>
+                    <label className="block text-sm font-medium text-gray-700">Description</label>
+                    <textarea value={description} onChange={e => setDescription(e.target.value)} rows={4} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"/>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                        <label className="block text-sm font-medium text-gray-700">Your Name</label>
+                        <label className="block text-sm font-medium text-gray-700">Owner Name</label>
                         <input type="text" value={ownerName} onChange={e => setOwnerName(e.target.value)} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"/>
                     </div>
                     <div>
-                        <label className="block text-sm font-medium text-gray-700">Your Phone</label>
+                        <label className="block text-sm font-medium text-gray-700">Owner Phone</label>
                         <input type="tel" value={ownerPhone} onChange={e => setOwnerPhone(e.target.value)} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"/>
                     </div>
                 </div>
-
-                <button type="submit" className="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-md hover:bg-blue-700 transition-colors">List My Property</button>
+                
+                <div className="flex space-x-4">
+                     <button type="button" onClick={onCancel} className="w-full bg-gray-500 text-white font-bold py-3 px-4 rounded-md hover:bg-gray-600 transition-colors">Cancel</button>
+                    <button type="submit" className="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-md hover:bg-blue-700 transition-colors">{propertyToEdit ? 'Save Changes' : 'List Property'}</button>
+                </div>
             </form>
         </div>
     );
@@ -787,44 +779,100 @@ const AddPropertyForm: React.FC = () => {
 
 // --- BUNDLED FROM components/AdminPanel.tsx ---
 const AdminPanel: React.FC = () => {
-    const { properties, deleteProperty, togglePropertyVerification } = useContext(AppContext);
+    const { properties, addProperty, updateProperty, deleteProperty, togglePropertyVerification } = useContext(AppContext);
+    const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false);
+    const [username, setUsername] = useState('');
+    const [password, setPassword] = useState('');
+    const [error, setError] = useState('');
+    
+    const [isFormOpen, setIsFormOpen] = useState(false);
+    const [editingProperty, setEditingProperty] = useState<Property | null>(null);
+
+    const handleAdminLogin = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (username === 'bentu' && password === 'Rinku@37') {
+            setIsAdminLoggedIn(true);
+            setError('');
+        } else {
+            setError('Invalid username or password.');
+        }
+    };
+
+    const handleAddNew = () => {
+        setEditingProperty(null);
+        setIsFormOpen(true);
+    };
+
+    const handleEdit = (property: Property) => {
+        setEditingProperty(property);
+        setIsFormOpen(true);
+    };
+
+    const handleSave = (data: PropertyFormData) => {
+        if (editingProperty) {
+            updateProperty({ ...editingProperty, ...data });
+        } else {
+            addProperty(data);
+        }
+        setIsFormOpen(false);
+        setEditingProperty(null);
+    };
+
+    if (!isAdminLoggedIn) {
+        return (
+            <div className="max-w-sm mx-auto mt-10 bg-white/90 backdrop-blur-sm p-8 rounded-xl shadow-lg">
+                <h2 className="text-2xl font-bold text-center text-gray-800 mb-6">Admin Login</h2>
+                <form onSubmit={handleAdminLogin} className="space-y-4">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700">Username</label>
+                        <input type="text" value={username} onChange={e => setUsername(e.target.value)} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500" />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700">Password</label>
+                        <input type="password" value={password} onChange={e => setPassword(e.target.value)} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500" />
+                    </div>
+                    {error && <p className="text-red-500 text-sm text-center">{error}</p>}
+                    <button type="submit" className="w-full bg-blue-600 text-white font-bold py-2 px-4 rounded-md hover:bg-blue-700 transition-colors">Login</button>
+                </form>
+            </div>
+        );
+    }
+    
+    if (isFormOpen) {
+        return <AddPropertyForm propertyToEdit={editingProperty} onSave={handleSave} onCancel={() => setIsFormOpen(false)} />;
+    }
 
     return (
-        <div className="max-w-4xl mx-auto bg-white/90 backdrop-blur-sm p-6 sm:p-8 rounded-xl shadow-lg">
-            <h2 className="text-3xl font-bold text-gray-800 mb-6 border-b pb-4">Admin Panel - Manage Properties</h2>
+        <div className="max-w-5xl mx-auto bg-white/90 backdrop-blur-sm p-6 sm:p-8 rounded-xl shadow-lg">
+             <div className="flex justify-between items-center mb-6 border-b pb-4">
+                <h2 className="text-3xl font-bold text-gray-800">Admin Panel</h2>
+                <button onClick={handleAddNew} className="bg-blue-600 text-white font-semibold py-2 px-4 rounded-md hover:bg-blue-700 transition-colors">
+                    + Add New Property
+                </button>
+            </div>
             <div className="space-y-4">
                 {properties.map(property => (
                     <div key={property.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 border rounded-lg hover:bg-gray-50">
-                        <div className="flex items-center mb-3 sm:mb-0">
+                        <div className="flex items-center mb-3 sm:mb-0 flex-grow">
                             <img src={property.images[0]} alt={property.title} className="w-16 h-16 rounded-md object-cover mr-4" />
                             <div>
                                 <h3 className="font-semibold text-gray-800">{property.title}</h3>
                                 <p className="text-sm text-gray-500">{property.location.area}, {property.location.block}</p>
-                                <p className="text-sm text-gray-700">Owner: {property.owner.name} ({property.owner.phone})</p>
                                 <p className={`text-sm font-bold ${property.isVerified ? 'text-green-600' : 'text-orange-500'}`}>
-                                    Status: {property.isVerified ? 'Verified' : 'Pending Verification'}
+                                    {property.isVerified ? 'Verified' : 'Pending'}
                                 </p>
                             </div>
                         </div>
                         <div className="flex items-center space-x-2 self-end sm:self-center">
+                             <button onClick={() => handleEdit(property)} className="bg-gray-200 text-gray-700 px-3 py-1.5 rounded-md text-sm font-semibold hover:bg-gray-300 transition-colors">Edit</button>
                             <button
                                 onClick={() => togglePropertyVerification(property.id)}
-                                className={`px-3 py-1.5 rounded-md text-sm font-semibold transition-colors ${
-                                    property.isVerified
-                                        ? 'bg-yellow-500 hover:bg-yellow-600 text-white'
-                                        : 'bg-green-500 hover:bg-green-600 text-white'
-                                }`}
-                            >
+                                className={`px-3 py-1.5 rounded-md text-sm font-semibold transition-colors text-white ${property.isVerified ? 'bg-yellow-500 hover:bg-yellow-600' : 'bg-green-500 hover:bg-green-600'}`}>
                                 {property.isVerified ? 'Unverify' : 'Verify'}
                             </button>
                             <button 
-                                onClick={() => {
-                                    if (window.confirm(`Are you sure you want to delete "${property.title}"?`)) {
-                                        deleteProperty(property.id);
-                                    }
-                                }}
-                                className="bg-red-500 text-white px-3 py-1.5 rounded-md text-sm font-semibold hover:bg-red-600 transition-colors"
-                            >
+                                onClick={() => { if (window.confirm(`Delete "${property.title}"?`)) { deleteProperty(property.id); } }}
+                                className="bg-red-500 text-white px-3 py-1.5 rounded-md text-sm font-semibold hover:bg-red-600 transition-colors">
                                 Delete
                             </button>
                         </div>
@@ -944,8 +992,9 @@ const backgroundThemes = [
 
 const App: React.FC = () => {
     const [themeIndex, setThemeIndex] = useState(0);
-    const { user } = useContext(AppContext);
+    const { user, addProperty } = useContext(AppContext);
     const [currentView, setCurrentView] = useState<View>('home');
+    const [isUserFormOpen, setIsUserFormOpen] = useState(false);
 
     useEffect(() => {
         const themeInterval = setInterval(() => {
@@ -955,13 +1004,29 @@ const App: React.FC = () => {
         return () => clearInterval(themeInterval);
     }, []);
 
+    const handleSaveUserProperty = (data: PropertyFormData) => {
+        addProperty(data);
+        setIsUserFormOpen(false);
+        setCurrentView('home');
+    };
+    
+    useEffect(() => {
+        if (currentView !== 'addProperty') {
+            setIsUserFormOpen(false);
+        } else if (user && !user.isAdmin) {
+             setIsUserFormOpen(true);
+        }
+    }, [currentView, user]);
+
     const renderView = () => {
+        if (isUserFormOpen) {
+            return <AddPropertyForm onSave={handleSaveUserProperty} onCancel={() => setCurrentView('home')} />;
+        }
         switch (currentView) {
-            case 'addProperty':
-                return <AddPropertyForm />;
             case 'admin':
                 return user?.isAdmin ? <AdminPanel /> : <div className="text-center p-8 text-red-500 font-bold">Access Denied</div>;
             case 'home':
+            case 'addProperty': // Fall through to home if form is not open
             default:
                 return <PropertyList />;
         }
