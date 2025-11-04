@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useContext, createContext, useMemo, ReactNode, useRef } from 'react';
 import ReactDOM from 'react-dom/client';
 import { GoogleGenAI } from "@google/genai";
@@ -7,7 +8,6 @@ interface User {
     name: string;
     email: string;
     isAdmin: boolean;
-    picture?: string;
 }
 
 enum PropertyType {
@@ -237,48 +237,14 @@ interface HeaderProps {
 
 const Header: React.FC<HeaderProps> = ({ setCurrentView }) => {
     const { isLoggedIn, user, login, logout, openBookingModal, properties } = useContext(AppContext);
-    const googleSignInButton = useRef<HTMLDivElement>(null);
 
-    const handleCredentialResponse = (response: any) => {
-        try {
-            const credential = response.credential;
-            const payload = JSON.parse(atob(credential.split('.')[1]));
-            
-            const email = payload.email;
-            if (email) {
-                const isAdmin = email === 'admin@example.com';
-                login({ 
-                    name: payload.name, 
-                    email: email, 
-                    isAdmin: isAdmin,
-                    picture: payload.picture
-                });
-            }
-        } catch (error) {
-            console.error("Error decoding JWT or logging in:", error);
-            alert("There was an error logging in. Please try again.");
+    const handleLogin = () => {
+        const email = prompt("अपनी ईमेल दर्ज करें (जैसे, user@example.com or admin@example.com)");
+        if (email) {
+            const isAdmin = email === 'admin@example.com';
+            login({ name: email.split('@')[0], email, isAdmin });
         }
     };
-    
-    useEffect(() => {
-        if (!isLoggedIn && googleSignInButton.current) {
-            if ((window as any).google) {
-                (window as any).google.accounts.id.initialize({
-                    // IMPORTANT: Create your own Google Client ID and replace this placeholder.
-                    // Go to https://console.cloud.google.com/apis/credentials to create one.
-                    client_id: "YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com", 
-                    callback: handleCredentialResponse
-                });
-                
-                (window as any).google.accounts.id.renderButton(
-                    googleSignInButton.current,
-                    { theme: "outline", size: "large", text: "continue_with", shape: "rectangular" } 
-                );
-                
-                (window as any).google.accounts.id.prompt(); 
-            }
-        }
-    }, [isLoggedIn]);
 
     const handleCartClick = () => {
         const testProperty = properties.find(p => p.rent === 1);
@@ -307,14 +273,15 @@ const Header: React.FC<HeaderProps> = ({ setCurrentView }) => {
                     <div className="flex items-center space-x-4">
                         {isLoggedIn ? (
                             <div className="flex items-center space-x-3">
-                                {user?.picture && <img src={user.picture} alt={user.name} className="h-8 w-8 rounded-full" />}
                                 <span className="text-sm font-medium text-gray-700 hidden sm:block">Welcome, {user?.name}</span>
                                 <button onClick={logout} className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
                                     Logout
                                 </button>
                             </div>
                         ) : (
-                           <div ref={googleSignInButton}></div>
+                           <button onClick={handleLogin} className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                                Login / Sign Up
+                           </button>
                         )}
                          <button onClick={handleCartClick} className="p-2 rounded-full text-gray-600 hover:bg-gray-200 hover:text-blue-600 transition-colors">
                             <CartIcon />
@@ -466,19 +433,25 @@ const PropertyCard: React.FC<PropertyCardProps> = ({ property }) => {
 const PropertyList: React.FC = () => {
     const { properties } = useContext(AppContext);
     const [selectedBlock, setSelectedBlock] = useState('All');
+    const [selectedArea, setSelectedArea] = useState('All');
     const [selectedType, setSelectedType] = useState('All');
     const [searchTerm, setSearchTerm] = useState('');
+
+    useEffect(() => {
+        setSelectedArea('All');
+    }, [selectedBlock]);
 
     const filteredProperties = useMemo(() => {
         return properties.filter(p => {
             const blockMatch = selectedBlock === 'All' || p.location.block === selectedBlock;
+            const areaMatch = selectedArea === 'All' || p.location.area === selectedArea;
             const typeMatch = selectedType === 'All' || p.type === selectedType;
             const searchMatch = searchTerm === '' || 
                                 p.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                                 p.location.area.toLowerCase().includes(searchTerm.toLowerCase());
-            return blockMatch && typeMatch && searchMatch;
+            return blockMatch && areaMatch && typeMatch && searchMatch;
         });
-    }, [properties, selectedBlock, selectedType, searchTerm]);
+    }, [properties, selectedBlock, selectedArea, selectedType, searchTerm]);
 
     return (
         <div>
@@ -500,6 +473,17 @@ const PropertyList: React.FC = () => {
                         <option value="All">All Blocks</option>
                         {Object.keys(LOCATION_DATA).map(block => (
                             <option key={block} value={block}>{block}</option>
+                        ))}
+                    </select>
+                    <select
+                        value={selectedArea}
+                        onChange={(e) => setSelectedArea(e.target.value)}
+                        disabled={selectedBlock === 'All'}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                    >
+                        <option value="All">All Colonies</option>
+                        {selectedBlock !== 'All' && LOCATION_DATA[selectedBlock].map(area => (
+                            <option key={area} value={area}>{area}</option>
                         ))}
                     </select>
                      <select
@@ -532,12 +516,6 @@ const PropertyList: React.FC = () => {
 };
 
 // --- BUNDLED FROM components/AddPropertyForm.tsx ---
-const SparkleIcon = ({ className = "w-5 h-5" }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.898 20.562L16.25 22.5l-.648-1.938a3.375 3.375 0 00-2.684-2.684L11.25 18l1.938-.648a3.375 3.375 0 002.684-2.684L16.25 13.5l.648 1.938a3.375 3.375 0 002.684 2.684L21.75 18l-1.938.648a3.375 3.375 0 00-2.684 2.684z" />
-    </svg>
-);
-
 const AddPropertyForm: React.FC = () => {
     const { addProperty, user } = useContext(AppContext);
     const [title, setTitle] = useState('');
@@ -549,38 +527,12 @@ const AddPropertyForm: React.FC = () => {
     const [description, setDescription] = useState('');
     const [ownerName, setOwnerName] = useState(user?.name || '');
     const [ownerPhone, setOwnerPhone] = useState('');
-    const [isGenerating, setIsGenerating] = useState(false);
 
     useEffect(() => {
         if(user && !ownerName) {
             setOwnerName(user.name);
         }
     }, [user, ownerName]);
-
-    const handleGenerateDescription = async () => {
-        if (!title || !rent || !area) {
-            alert('Please fill in Title, Rent, and Area before generating a description.');
-            return;
-        }
-        setIsGenerating(true);
-        try {
-            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-            const prompt = `Write a compelling and professional property rental description in about 40-50 words for a property in Sonipat, India. The property is a '${type}' titled '${title}' located in '${area}, ${block}'. The monthly rent is ₹${rent}. Highlight key features suitable for this type of property and use a friendly but professional tone. Do not use hashtags.`;
-            
-            const response = await ai.models.generateContent({
-                model: "gemini-2.5-flash",
-                contents: prompt,
-            });
-
-            const text = response.text;
-            setDescription(text.trim());
-        } catch (error) {
-            console.error("Error generating description:", error);
-            alert("Sorry, we couldn't generate a description at this time. Please try again later.");
-        } finally {
-            setIsGenerating(false);
-        }
-    };
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -663,18 +615,7 @@ const AddPropertyForm: React.FC = () => {
                 </div>
 
                 <div>
-                    <div className="flex justify-between items-center">
-                        <label htmlFor="description" className="block text-sm font-medium text-gray-700">Description</label>
-                        <button
-                            type="button"
-                            onClick={handleGenerateDescription}
-                            disabled={isGenerating}
-                            className="flex items-center px-2 py-1 text-xs font-semibold text-indigo-700 bg-indigo-100 rounded-lg hover:bg-indigo-200 disabled:bg-gray-200 disabled:text-gray-500 transition-all duration-200"
-                        >
-                            <SparkleIcon className="w-4 h-4 mr-1.5" />
-                            {isGenerating ? 'Generating...' : 'Write with AI'}
-                        </button>
-                    </div>
+                    <label htmlFor="description" className="block text-sm font-medium text-gray-700">Description</label>
                     <textarea id="description" value={description} onChange={e => setDescription(e.target.value)} rows={4} required className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"/>
                 </div>
 
